@@ -10,7 +10,7 @@ The following files are included:
   * *HCP_helpers.py* : contains all helper functions and module imports for resting-state fMRI preprocessing, and prediction of behavior
 
   * *intelligence.ipynb* : reproduces analyses in 
-  > Dubois, J., Galdi, P., Paul, L.K. and Adolphs, R. A distributed brain network predicts general intelligence from resting-state human neuroimaging data. Under review. Preprint: (submitted to bioR&chi;iv)
+  > Dubois, J., Galdi, P., Paul, L.K. and Adolphs, R. A distributed brain network predicts general intelligence from resting-state human neuroimaging data. Under review. Preprint: https://www.biorxiv.org/content/early/2018/01/31/257865
 
 The following file will be available shortly:
 
