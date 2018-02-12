@@ -1,3 +1,5 @@
+from __future__ import division
+
 #----------------------------------
 # initialize global variable config
 #----------------------------------
@@ -13,9 +15,12 @@ class config(object):
     Flavors            = {}
     sortedOperations   = list()
     maskParcelswithGM  = False
-    prewhitening       = False
+    preWhitening       = False
     maskParcelswithAll = True
     save_voxelwise     = False
+    useNative          = False
+    parcellationName   = ''
+    parcellationFile   = ''
     # these variables are initialized here and used later in the pipeline, do not change
     filtering   = []
     doScrubbing = False
@@ -24,7 +29,6 @@ class config(object):
 #----------------------------------
 # IMPORTS
 #----------------------------------
-from __future__ import division
 # Force matplotlib to not use any Xwindows backend.
 import matplotlib
 # core dump with matplotlib 2.0.0; use earlier version, e.g. 1.5.3
@@ -707,7 +711,7 @@ def Detrending(niiImg, flavor, masks, imgInfo):
             x = np.arange(nTRs)            
             y = np.ones((nPoly,len(x)))
             for i in range(nPoly):
-                y[i,:] = (x - (np.max(x)/2)) **(i+1)
+                y[i,:] = (x - (np.max(x)/2)) **(i)
                 y[i,:] = y[i,:] - np.mean(y[i,:])
                 y[i,:] = y[i,:]/np.max(y[i,:]) 
         else:
@@ -725,7 +729,7 @@ def Detrending(niiImg, flavor, masks, imgInfo):
             x = np.arange(nTRs)
             y = np.ones((nPoly,len(x)))
             for i in range(nPoly):
-                y[i,:] = (x - (np.max(x)/2)) **(i+1)
+                y[i,:] = (x - (np.max(x)/2)) **(i)
                 y[i,:] = y[i,:] - np.mean(y[i,:])
                 y[i,:] = y[i,:]/np.max(y[i,:])
         niiImgGM = regress(niiImgGM, nTRs, TR, y[1:nPoly,:].T, config.preWhitening)
@@ -740,7 +744,7 @@ def Detrending(niiImg, flavor, masks, imgInfo):
             x = np.arange(nTRs)
             y = np.ones((nPoly,len(x)))
             for i in range(nPoly):
-                y[i,:] = (x - (np.max(x)/2)) **(i+1)
+                y[i,:] = (x - (np.max(x)/2)) **(i)
                 y[i,:] = y[i,:] - np.mean(y[i,:])
                 y[i,:] = y[i,:]/np.max(y[i,:])        
         else:
@@ -1117,7 +1121,35 @@ def plotFC(displayPlot=False,overwrite=False):
 
     return fcMat,fcMat_dn
 
-def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFile='', iPerm=[0], SM='PMAT24_A_CR', session='REST12', decon='decon', fctype='Pearson', model='Finn',outDir='',confounds=['gender','age','age^2','gender*age','gender*age^2','brainsize','motion','recon'],):
+
+def defConVec(df,confound,session):
+    if confound == 'gender':
+        conVec = df['Gender']
+    elif confound == 'age':
+        conVec = df['Age_in_Yrs']
+    elif confound == 'handedness':
+        conVec = df['Handedness']
+    elif confound == 'age^2':
+        conVec = np.square(df['Age_in_Yrs'])
+    elif confound == 'gender*age':
+        conVec = np.multiply(df['Gender'],df['Age_in_Yrs'])
+    elif confound == 'gender*age^2':
+        conVec = np.multiply(df['Gender'],np.square(df['Age_in_Yrs']))
+    elif confound == 'brainsize':
+        conVec = df['FS_BrainSeg_Vol']
+    elif confound == 'motion':
+        if session in ['REST1','REST2']:
+            conVec = df['FDsum_'+session]
+        elif session == 'REST12':
+            conVec = .5*(df['FDsum_REST1'] + df['FDsum_REST2'])
+    elif confound == 'recon':
+        conVec = df['fMRI_3T_ReconVrs']
+    elif confound == 'PMAT24_A_CR':
+        conVec = df['PMAT24_A_CR']
+    return conVec
+
+
+def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFile='', iPerm=[0], SM='PMAT24_A_CR', session='REST12', decon='decon', fctype='Pearson', model='Finn',outDir='',confounds=['gender','age','age^2','gender*age','gender*age^2','brainsize','motion','recon']):
     data         = sio.loadmat(fcMatFile)
     edges        = data['fcMats_'+fctype]
 
@@ -1137,27 +1169,7 @@ def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFil
     conMat = None
     if len(confounds)>0:
         for confound in confounds:
-            if confound == 'gender':
-                conVec = df['Gender']
-            elif confound == 'age':
-                conVec = df['Age_in_Yrs']
-            elif confound == 'age^2':
-                conVec = np.square(df['Age_in_Yrs'])
-            elif confound == 'gender*age':
-                conVec = np.multiply(df['Gender'],df['Age_in_Yrs'])
-            elif confound == 'gender*age^2':
-                conVec = np.multiply(df['Gender'],np.square(df['Age_in_Yrs']))
-            elif confound == 'brainsize':
-                conVec = df['FS_BrainSeg_Vol']
-            elif confound == 'motion':
-                if session == 'REST12':
-                    conVec = .5*(df['FDsum_REST1']+df['FDsum_REST2']) 
-                else:
-                    conVec = df['FDsum_'+session]
-            elif confound == 'recon':
-                conVec = df['fMRI_3T_ReconVrs']
-            elif confound == 'PMAT24_A_CR':
-                conVec = df['PMAT24_A_CR']
+            conVec = defConVec(df,confound,session)
             # add to conMat
             if conMat is None:
                 conMat = np.array(np.ravel(conVec))
@@ -1200,6 +1212,10 @@ def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFil
             # read permutation indices
             permInds = np.loadtxt(op.join(outDir,'..','permInds.txt'),dtype=np.int16)
             score    = score[permInds[thisPerm-1,:]]
+
+        if not op.isdir(op.join(outDir,'{:04d}'.format(thisPerm))):
+            mkdir(op.join(outDir,'{:04d}'.format(thisPerm)))
+
 
         outFile = op.join(outDir,'{:04d}'.format(thisPerm),'{}.mat'.format(
             '_'.join(['%s' % test_sub for test_sub in df['Subject'][test_index]])))
@@ -1295,7 +1311,7 @@ def runPredictionParJD(fcMatFile, dataFile, SM='PMAT24_A_CR', iPerm=[0], confoun
         jobName = 'f{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(el,config.pipelineName,config.parcellationName,SM, model,config.release,session,decon,fctype)
         # make a script
         thispythonfn  = '<< END\nimport sys\nsys.path.insert(0,"{}")\n'.format(getcwd())
-        thispythonfn += 'from helpers_clean import *\n'
+        thispythonfn += 'from HCP_helpers import *\n'
         thispythonfn += 'logFid                  = open("{}","a+")\n'.format(op.join(jobDir,jobName+'.log'))
         thispythonfn += 'sys.stdout              = logFid\n'
         thispythonfn += 'sys.stderr              = logFid\n'
@@ -1545,7 +1561,7 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False):
 
         # make a script
         thispythonfn  = '<< END\nimport sys\nsys.path.insert(0,"{}")\n'.format(getcwd())
-        thispythonfn += 'from helpers_clean import *\n'
+        thispythonfn += 'from HCP_helpers import *\n'
         thispythonfn += 'logFid                  = open("{}","a+",1)\n'.format(op.join(jobDir,jobName+'.log'))
         thispythonfn += 'sys.stdout              = logFid\n'
         thispythonfn += 'sys.stderr              = logFid\n'
