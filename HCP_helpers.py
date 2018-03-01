@@ -89,7 +89,6 @@ config.operationDict = {
         ['Detrending',              6, ['legendre', 3 ,'GM']],
         ['GlobalSignalRegression',  7, ['GS']]
         ],
-
     'B': [ #Satterthwaite et al. 2013 (Ciric7)
         ['VoxelNormalization',      1, ['demean']],
         ['Detrending',              2, ['poly', 2, 'wholebrain']],
@@ -99,7 +98,6 @@ config.operationDict = {
         ['GlobalSignalRegression',  4, ['GS+dt+sq']],
         ['Scrubbing',               4, ['RMS', 0.25]]
         ],
-
     'C': [ #Siegel et al. 2016 (SiegelB)
         ['VoxelNormalization',      1, ['demean']],
         ['Detrending',              2, ['poly', 1, 'wholebrain']],
@@ -109,6 +107,25 @@ config.operationDict = {
         ['MotionRegression',        3, ['censoring']],
         ['Scrubbing',               3, ['FD+DVARS', 0.25, 5]], 
         ['TemporalFiltering',       4, ['Butter', 0.009, 0.08]]
+        ],
+    'B0': [ # same as B, with very small change to force recomputation after bug discovered in polynomial filtering 2/12/2018
+        ['VoxelNormalization',      1, ['demean']],
+        ['Detrending',              2, ['poly', 2, 'wholebrain']],
+        ['TemporalFiltering',       3, ['Butter', 0.01, 0.0801]], 
+        ['MotionRegression',        4, ['R dR R^2 dR^2']],
+        ['TissueRegression',        4, ['WMCSF+dt+sq', 'wholebrain']],
+        ['GlobalSignalRegression',  4, ['GS+dt+sq']],
+        ['Scrubbing',               4, ['RMS', 0.25]]
+        ],
+    'C0': [ # same as C, with very small change to force recomputation after bug discovered in polynomial filtering 2/12/2018
+        ['VoxelNormalization',      1, ['demean']],
+        ['Detrending',              2, ['poly', 1, 'wholebrain']],
+        ['TissueRegression',        3, ['CompCor', 5, 'WMCSF', 'wholebrain']],
+        ['TissueRegression',        3, ['GM', 'wholebrain']], 
+        ['GlobalSignalRegression',  3, ['GS']],
+        ['MotionRegression',        3, ['censoring']],
+        ['Scrubbing',               3, ['FD+DVARS', 0.25, 5]], 
+        ['TemporalFiltering',       4, ['Butter', 0.009, 0.0801]]
         ]
     }
 #----------------------------------
@@ -1464,7 +1481,7 @@ def runPipeline():
 
     return
 
-def runPipelinePar(launchSubproc=False,overwriteFC=False):
+def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
     if config.queue: 
         priority=-100
     config.suffix = '_hp2000_clean' if config.useFIX else '' 
@@ -1602,11 +1619,12 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False):
             thispythonfn += 'makeGrayPlot(overwrite=config.overwrite)\n'
         if do_plotFC:
             thispythonfn += 'plotFC(overwrite=overwriteFC)\n'
-        if config.useMemMap:
-            thispythonfn += 'try:\n    remove(config.fmriFile.replace(".gz",""))\nexcept OSError:\n    pass\n'
-            thispythonfn += 'try:\n    remove(config.fmriFile_dn.replace(".gz",""))\nexcept OSError:\n    pass\n'
-        if config.isCifti:
-            thispythonfn += 'for f in glob.glob(config.fmriFile.replace("_Atlas","").replace(".dtseries.nii","*.tsv")): os.remove(f)\n'
+        if cleanup:
+            if config.useMemMap:
+                thispythonfn += 'try:\n    remove(config.fmriFile.replace(".gz",""))\nexcept OSError:\n    pass\n'
+                thispythonfn += 'try:\n    remove(config.fmriFile_dn.replace(".gz",""))\nexcept OSError:\n    pass\n'
+            if config.isCifti:
+                thispythonfn += 'for f in glob.glob(config.fmriFile.replace("_Atlas","").replace(".dtseries.nii","*.tsv")): os.remove(f)\n'
         thispythonfn += 'logFid.close()\n'
         thispythonfn += 'END'
 
@@ -1653,22 +1671,22 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False):
         if do_plotFC:
             plotFC(overwrite=overwriteFC)
 
-        if config.useMemMap:
-            try: 
-                remove(config.fmriFile.replace(".gz",""))
-            except OSError:
-                pass
-            try:
-                remove(config.fmriFile_dn.replace(".gz",""))
-            except OSError:
-                pass
-        if config.isCifti:
-            for f in glob.glob(config.fmriFile.replace('_Atlas','').replace(".dtseries.nii","*.tsv")):
-                try:
-                    remove(f)
+        if cleanup:
+            if config.useMemMap:
+                try: 
+                    remove(config.fmriFile.replace(".gz",""))
                 except OSError:
                     pass
-    
+                try:
+                    remove(config.fmriFile_dn.replace(".gz",""))
+                except OSError:
+                    pass
+            if config.isCifti:
+                for f in glob.glob(config.fmriFile.replace('_Atlas','').replace(".dtseries.nii","*.tsv")):
+                    try:
+                        remove(f)
+                    except OSError:
+                        pass
     return True
 
 
