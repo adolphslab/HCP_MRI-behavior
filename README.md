@@ -71,6 +71,41 @@ It is a list of structures. Each structure is a list of 3 elements:
 
 Operations are executed following the operation order specified by the user. Note that in case of regression operations, a single regression step combining multiple regressors (e.g., tissue regressors and global signal regressor) can be requested by assigning the same order to all regression steps.
 
+There are three pipelines already specified in the *HCP_helpers.py* file.
+
+```
+config.operationDict = {
+    'A': [ #Finn et al. 2015
+        ['VoxelNormalization',      1, ['zscore']],
+        ['Detrending',              2, ['legendre', 3, 'WMCSF']],
+        ['TissueRegression',        3, ['WMCSF', 'GM']],
+        ['MotionRegression',        4, ['R dR']],
+        ['TemporalFiltering',       5, ['Gaussian', 1]],
+        ['Detrending',              6, ['legendre', 3 ,'GM']],
+        ['GlobalSignalRegression',  7, ['GS']]
+        ],
+    'B': [ #Satterthwaite et al. 2013 (Ciric7)
+        ['VoxelNormalization',      1, ['demean']],
+        ['Detrending',              2, ['poly', 2, 'wholebrain']],
+        ['TemporalFiltering',       3, ['Butter', 0.01, 0.08]],
+        ['MotionRegression',        4, ['R dR R^2 dR^2']],
+        ['TissueRegression',        4, ['WMCSF+dt+sq', 'wholebrain']],
+        ['GlobalSignalRegression',  4, ['GS+dt+sq']],
+        ['Scrubbing',               4, ['RMS', 0.25]]
+        ],
+    'C': [ #Siegel et al. 2016 (SiegelB)
+        ['VoxelNormalization',      1, ['demean']],
+        ['Detrending',              2, ['poly', 1, 'wholebrain']],
+        ['TissueRegression',        3, ['CompCor', 5, 'WMCSF', 'wholebrain']],
+        ['TissueRegression',        3, ['GM', 'wholebrain']], 
+        ['GlobalSignalRegression',  3, ['GS']],
+        ['MotionRegression',        3, ['censoring']],
+        ['Scrubbing',               3, ['FD+DVARS', 0.25, 5]], 
+        ['TemporalFiltering',       4, ['Butter', 0.009, 0.08]]
+        ],
+    }
+```
+
 ### Pipeline Operations
 
 #### Voxel Normalization
@@ -82,7 +117,7 @@ Example: `['VoxelNormalization',      1, ['zscore']]`
 * <b>poly:</b> polynomial regressors up to specified order.
 	1. Specify polynomial order.
 	2. Specify tissue, one of 'WMCSF' or 'GM'.
-*<b>legendre:</b> Legendre polynomials up to specified order.
+* <b>legendre:</b> Legendre polynomials up to specified order.
 	1. Specify polynomial order 
 	2. Specify tissue, one of 'WMCSF' or 'GM'.
 
@@ -103,19 +138,19 @@ Note: uncensored segments of data lasting fewer than 5 contiguous volumes, are f
 	1. Specify a threshold for framewise displacement (FD) in mm.
 	2. Specify a threshold <i>t</i> s.t. volumes with a variance of differentiated signal (DVARS) greater than (100 + <i>t</i>)% of the run median DVARS are flagged for removal.
 	3. Specify number of adjacent volumes to exclude (optional).
-*<b>RMS</b>
+* <b>RMS</b>
 	1. Specify threshold for root mean square displacement in mm.
 	2. Specify number of adjacent volumes to exclude (optional).
 
 Example: `['Scrubbing',      4, ['FD+DVARS', 0.25, 5]]`
 #### Tissue Regression 
-*<b>GM:</b> the gray matter signal is added as a regressor.
+* <b>GM:</b> the gray matter signal is added as a regressor.
 	1. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain')
-*<b>WMCSF:</b> white matter and cerebrospinal fluid signals are added as regressors.
+* <b>WMCSF:</b> white matter and cerebrospinal fluid signals are added as regressors.
 	1. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain')
-*<b>WMCSF+dt+sq:</b> white matter and cerebrospinal fluid signals with their derivatives and quadratic terms are added as regressors.
+* <b>WMCSF+dt+sq:</b> white matter and cerebrospinal fluid signals with their derivatives and quadratic terms are added as regressors.
 	1. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain')
-*CompCor:</b> a PCA-based method (Behzadi et al., 2007) is used to derive N components from CSF and WM signals.
+* <b>CompCor:</b> a PCA-based method (Behzadi et al., 2007) is used to derive N components from CSF and WM signals.
 	1. Specify no. of components to compute for specified tissue mask (see following parameter).
 	2. Specify if components should be computed using a single mask for white matter and cerebrospinal fluid ('WMCSF') or separatedly for white matter and cerebrospinal fluid ('WM+CSF')
 	3. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain').
@@ -123,8 +158,8 @@ Example: `['Scrubbing',      4, ['FD+DVARS', 0.25, 5]]`
 Example: `['TissueRegression',        5, ['CompCor', 5, 'WMCSF', 'wholebrain']]`
 
 #### Global Signal Regression
-*<b>GS:</b> the global signal is added as a regressor.
-*<b>GS+dt+sq:</b> the global signal with its derivative and square term are added as regressors.
+* <b>GS:</b> the global signal is added as a regressor.
+* <b>GS+dt+sq:</b> the global signal with its derivative and square term are added as regressors.
 
 Example: `['GlobalSignalRegression',      6, ['GS+dt+sq']]`
 #### Temporal Filtering
