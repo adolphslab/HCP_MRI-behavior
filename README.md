@@ -55,7 +55,7 @@ Preprocessing is performed executing a sequence of steps or operations, each of 
 
 A preprocessing pipeline can be fully described with the following data structure:
 
-``
+```
 [
         ['Operation1',  1, [param1]],
         ['Operation2',  2, [param1, param2, param3]],
@@ -80,9 +80,9 @@ Operations are executed following the operation order specified by the user. Not
 * <b>demean:</b> substract the mean from each voxel's time series.
 
 Example:
-
+```
    ['VoxelNormalization',      1, ['zscore']]
-
+```
 #### Detrending
   <ul>
     <li> <b>poly:</b> polynomial regressors up to specified order.
