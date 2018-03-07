@@ -34,33 +34,55 @@ In order to run the provided code the following packages are needed:
 - scikit_learn==0.19.1
 
 ## Instruction for launching:
-<ol>
-<li> Customize parameters
-<ul>
-<li> In the notebook in cell <b>Set Parameters</b>
-</ul>
-<li> Launch the pipeline
-<ul>
-<li> In the notebook cells can be executed sequentially (one by one or from the menu Cell->Run All)
-</ul>
-</ol>
+1. Customize parameters
+	* In the notebook in cell <b>Set Parameters</b>
+2. Launch the pipeline
+	* In the notebook cells can be executed sequentially (one by one or from the menu Cell->Run All)
 
 ## Overview
 
 ### Preprocessing Pipeline
-...
+Preprocessing is performed executing a sequence of steps or operations, each of which corresponds to a function in the *HCP_helpers.py* file. There are 7 available operations: [Voxel Normalization](#voxel-normalization), [Detrending](#detrending), [Motion Regression](#motion-regression), [Scrubbing](#voxel-normalization), [Tissue Regression](#tissue-regression), [Global Signal Regression](#global-signal-regression) and [Temporal Filtering](#temporal-filtering). The corresponding functions are built using the following template:
+
+```
+ def OperationName(niiImg, flavor, masks, imgInfo):
+```
+
+* <b>niiImg</b> it is a list of two elements `[data,volData]`. If the file to be processes is a Nifti file, the variable `data` contains Nifti data and the variable `volData` is `None`. If the input file is a Cifti file, the variable `data` contains Cifti data and the variable `volData` contains volumetric data. Image data can be loaded with function `load_img()`.
+* <b>flavor</b> is a list containing the Operation parameters (detailed in the [following section](#pipeline-operations)).
+* <b>masks</b> is the output of the function `makeTissueMasks()`, a list of four elements corresponding to 1) whole brain mask, 2) white matter mask, 3) cerebrospinal fluid mask and 4) gray matter mask. 
+* <b>imgInfo</b> is a list of 6 elements corresponding to 1) no. of rows in a slice, 2) no. of columns in a slice, 3) no. of slices, 4) no. of time points, 5) the affine matrix and 6) repetion time. These data can be retrieved with function `load_img()`.
+
+A preprocessing pipeline can be fully described with the following data structure:
+
+``
+[
+        ['Operation1',  1, [param1]],
+        ['Operation2',  2, [param1, param2, param3]],
+        ['Operation3',  3, [param1, param2]],
+        ['Operation4',  4, [param1]],
+        ['Operation5',  5, [param1, param2]],
+        ['Operation6',  6, [param1, param2, param3]],
+        ['Operation7',  7, [param]]
+]
+```
+It is a list of structures. Each structure is a list of 3 elements:
+1. The operation name.
+2. The operation order.
+3. The list of parameters for the specific operation.
+
+Operations are executed following the operation order specified by the user. Note that in case of regression operations, a single regression step combining multiple regressors (e.g., tissue regressors and global signal regressor) can be requested by assigning the same order to all regression steps.
 
 ### Pipeline Operations
 
 #### Voxel Normalization
-<ul>
-  <li> <b>zscore:</b> convert each voxel’s time course to z-score (remove mean, divide by standard deviation).
-  <li> <b>demean:</b> substract the mean from each voxel's time series.
-</ul>
+* <b>zscore:</b> convert each voxel’s time course to z-score (remove mean, divide by standard deviation).
+* <b>demean:</b> substract the mean from each voxel's time series.
+
 Example:
-```
- ['VoxelNormalization',      1, ['zscore']]
-```
+
+   ['VoxelNormalization',      1, ['zscore']]
+
 #### Detrending
   <ul>
     <li> <b>poly:</b> polynomial regressors up to specified order.
@@ -74,7 +96,7 @@ Example:
 ```
  ['Detrending',      2, ['poly', 3, 'GM']]
 ```
-#### MotionRegression 
+#### Motion Regression 
 Note: R = [X Y Z pitch yaw roll]<br>
 Note: if temporal filtering has already been performed, the motion regressors are filtered too. <br>
 Note: if scrubbing has been requested, a regressor is added for each volume to be censored; the censoring option performs only scrubbing.
@@ -146,10 +168,3 @@ Example:
 ```
  ['TemporalFiltering',       7, ['Butter', 0.009, 0.08]]
 ```
-
-
-
-
-
-
-
