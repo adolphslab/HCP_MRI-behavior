@@ -79,10 +79,7 @@ Operations are executed following the operation order specified by the user. Not
 * <b>zscore:</b> convert each voxel’s time course to z-score (remove mean, divide by standard deviation).
 * <b>demean:</b> substract the mean from each voxel's time series.
 
-Example:
-```
-   ['VoxelNormalization',      1, ['zscore']]
-```
+Example: `['VoxelNormalization',      1, ['zscore']]`
 #### Detrending
   <ul>
     <li> <b>poly:</b> polynomial regressors up to specified order.
@@ -92,10 +89,7 @@ Example:
 	<ol><li>Specify polynomial order 
 	<li>Specify tissue, one of 'WMCSF' or 'GM'.</ol>
   </ul>
-Example:
-```
- ['Detrending',      2, ['poly', 3, 'GM']]
-```
+Example: `['Detrending',      2, ['poly', 3, 'GM']]`
 #### Motion Regression 
 Note: R = [X Y Z pitch yaw roll]<br>
 Note: if temporal filtering has already been performed, the motion regressors are filtered too. <br>
@@ -105,10 +99,7 @@ Note: if scrubbing has been requested, a regressor is added for each volume to b
   <li> <b>R dR R^2 dR^2:</b>: realignment parameters (R) with their derivatives (dR), quadratic terms (R^2) and square of derivatives (dR^2) are used in motion regression.
   <li> <b>censoring:</b> for each volume tagged for scrubbing, a unit impulse function  with a value of 1 at that time point and 0 elsewhere is included as a regressor.
   </ul>
-Example:
-```
- ['MotionRegression',      3, ['R dR']]
-```
+Example: `['MotionRegression',      3, ['R dR']]`
 #### Scrubbing
 Note: this step only flags the volumes to be censored, that are then regressed out in the MotionRegression step.<br>
 Note: uncensored segments of data lasting fewer than 5 contiguous volumes, are flagged for removal as well.
@@ -123,10 +114,7 @@ Note: uncensored segments of data lasting fewer than 5 contiguous volumes, are f
 <li> Specify number of adjacent volumes to exclude (optional).
 </ol>
   </ul>
-Example:
-```
- ['Scrubbing',      4, ['FD+DVARS', 0.25, 5]]
-```
+Example: `['Scrubbing',      4, ['FD+DVARS', 0.25, 5]]`
 #### Tissue Regression 
   <ul>
   <li> <b>GM:</b> the gray matter signal is added as a regressor.
@@ -141,20 +129,14 @@ Example:
 	<li>Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain').
 	</ol>
   </ul>
-Example:
-```
-['TissueRegression',        5, ['CompCor', 5, 'WMCSF', 'wholebrain']]
-```
+Example: `['TissueRegression',        5, ['CompCor', 5, 'WMCSF', 'wholebrain']]`
 
 #### Global Signal Regression
 <ul>
 <li> <b>GS:</b> the global signal is added as a regressor.
 <li> <b>GS+dt+sq:</b> the global signal with its derivative and square term are added as regressors.
 </ul>
-Example:
-```
- ['GlobalSignalRegression',      6, ['GS+dt+sq']]
-```
+Example: `['GlobalSignalRegression',      6, ['GS+dt+sq']]`
 #### Temporal Filtering
 Note: if scrubbing has been requested, censored volumes are replaced by linear interpolation.
   <ul>
@@ -164,7 +146,4 @@ Note: if scrubbing has been requested, censored volumes are replaced by linear i
   <li> <b>Gaussian:</b> Low pass Gaussian smoothing.
 	<ol><li>Specify standard deviation.</ol>
   </ul>
-Example:
-```
- ['TemporalFiltering',       7, ['Butter', 0.009, 0.08]]
-```
+Example: `['TemporalFiltering',       7, ['Butter', 0.009, 0.08]]`
