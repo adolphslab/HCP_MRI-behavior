@@ -137,6 +137,16 @@ config.operationDict = {
 # for the specific analyses conducted 
 # in intelligence.ipynb and personality.ipynb
 #----------------------------------
+
+## 
+#  @brief Apply filter to regressors 
+#  
+#  @param  [int] regressors (nTRs,n) array of n regressors to be filtered
+#  @param  [int] filtering filtering method, either 'Butter' or 'Gaussian'
+#  @param  [int] nTRs number of time points
+#  @param  [int] TR repetition time
+#  @return [np.array] filtered regressors
+#  
 def filter_regressors(regressors, filtering, nTRs, TR):
     if len(filtering)==0:
         print 'Error! Missing or wrong filtering flavor. Regressors were not filtered.'
@@ -149,6 +159,16 @@ def filter_regressors(regressors, filtering, nTRs, TR):
             regressors = signal.lfilter(w,1,regressors, axis=0)  
     return regressors
 
+## 
+#  @brief Apply voxel-wise linear regression to input image
+#  
+#  @param  [numpy.array] data input image
+#  @param  [int] nTRs number of time points
+#  @param  [float] TR repetition time
+#  @param  [numpy.array] regressors (nTRs,n) array of n regressors
+#  @param  [bool] preWhitening True if preWhitening should be applied
+#  @return [numpy.array] residuals of regression, same dimensions as data
+#  	
 def regress(data, nTRs, TR, regressors, preWhitening=False):
     print 'Starting regression with {} regressors...'.format(regressors.shape[1])
     if preWhitening:
@@ -165,7 +185,14 @@ def regress(data, nTRs, TR, regressors, preWhitening=False):
     elapsed_time = time() - start_time
     print 'Regression completed in {:02d}h{:02d}min{:02d}s'.format(int(np.floor(elapsed_time/3600)),int(np.floor((elapsed_time%3600)/60)),int(np.floor(elapsed_time%60))) 
     return data
-
+	
+## 
+#  @brief Create Legendre polynomial regressor
+#  
+#  @param  [int] order degree of polynomial
+#  @param  [int] nTRs number of time points
+#  @return [numpy.array] polynomial regressors
+#  
 def legendre_poly(order, nTRs):
     # ** a) create polynomial regressor **
     x = np.arange(nTRs)
@@ -181,7 +208,15 @@ def legendre_poly(order, nTRs):
             y[i,:] = y[i,:] - np.mean(y[i,:])
             y[i,:] = y[i,:]/np.max(y[i,:])
     return y
-
+	
+## 
+#  @brief Load Nifti data 
+#  
+#  @param  [str] volFile filename of volumetric file to be loaded
+#  @param  [numpy.array] maskAll whole brain mask
+#  @param  [bool] unzip True if memmap should be used to load data
+#  @return [tuple] image data, no. of rows in image, no. if columns in image, no. of slices in image, no. of time points, affine matrix and repetition time
+#  
 def load_img(volFile,maskAll=None,unzip=config.useMemMap):
     if unzip:
         volFileUnzip = volFile.replace('.gz','') 
@@ -215,7 +250,13 @@ def load_img(volFile,maskAll=None,unzip=config.useMemMap):
             data = np.asarray(img.dataobj).reshape((nRows*nCols*nSlices,nTRs), order='F')[maskAll,:]
 
     return data, nRows, nCols, nSlices, nTRs, img.affine, TR
-
+	
+## 
+#  @brief Create whole brain and tissue masks
+#  
+#  @param  [bool] overwrite True if existing files should be overwritten
+#  @return [tuple] whole brain, white matter, cerebrospinal fluid and gray matter masks
+#  
 def makeTissueMasks(overwrite=False):
     fmriFile = op.join(buildpath(), config.fmriRun+config.suffix+'.nii.gz')
     WMmaskFileout = op.join(buildpath(), 'WMmask.nii')
@@ -314,7 +355,6 @@ def makeTissueMasks(overwrite=False):
 
     return maskAll, maskWM_, maskCSF_, maskGM_
 
-
 def extract_noise_components(niiImg, WMmask, CSFmask, num_components=5, flavor=None):
     """
     Largely based on https://github.com/nipy/nipype/blob/master/examples/
@@ -368,7 +408,17 @@ def extract_noise_components(niiImg, WMmask, CSFmask, num_components=5, flavor=N
         u, _, _ = linalg.svd(X, full_matrices=False)
         components = np.hstack((components, u[:, :num_components]))
     return components
-
+	
+## 
+#  @brief Create a XML file describing preprocessing steps
+#  
+#  @param [str] inFile filename of input image data
+#  @param [str] dataDir data directory path
+#  @param [list] operations pipeline operations
+#  @param [float] startTime start time of preprocessing
+#  @param [float] endTime end time of preprocessing
+#  @param [str] fname filename of XML log file
+#  
 def conf2XML(inFile, dataDir, operations, startTime, endTime, fname):
     doc = ET.Element("pipeline")
     
@@ -399,13 +449,21 @@ def conf2XML(inFile, dataDir, operations, startTime, endTime, fname):
         nodeFlavor.text = str(op[2])
     tree = ET.ElementTree(doc)
     tree.write(fname)
-
+	
+## 
+#  @brief Create string timestamp
+#  
+#  @return [str] timestamp
+#  
 def timestamp():
    now          = time()
    loctime      = localtime(now)
    milliseconds = '%03d' % int((now - int(now)) * 1000)
    return strftime('%Y%m%d%H%M%S', loctime) + milliseconds
 
+## 
+#  @brief Submit array of jobs with sge qsub (needs to be customized)
+#  
 def fnSubmitJobArrayFromJobList():
     config.tStamp = timestamp()
     # make directory
@@ -433,7 +491,10 @@ def fnSubmitJobArrayFromJobList():
     cmdOut = check_output(strCommand, shell=True)
     config.scriptlist = []
     return cmdOut.split()[2]    
-    
+
+## 
+#  @brief Submit jobs with sge qsub
+#      
 def fnSubmitToCluster(strScript, strJobFolder, strJobUID, resources):
     specifyqueue = ''
     # clean up .o and .e
@@ -456,10 +517,27 @@ def fnSubmitToCluster(strScript, strJobFolder, strJobUID, resources):
     cmdOut = check_output(strCommand, shell=True)
     return cmdOut.split()[2]    
 
+## 
+#  @brief Return list of files ordered by edit time
+#  
+#  @param  [str] path directory of files to be listed
+#  @param  [bool] reverseOrder True if files should be sorted by most recent
+#  @return [list] file list ordered by edit time
+#  
 def sorted_ls(path, reverseOrder):
     mtime = lambda f: os.stat(os.path.join(path, f)).st_mtime
     return list(sorted(os.listdir(path), key=mtime, reverse=reverseOrder))
-	
+
+## 
+#  @brief Check if preprocessing has already been performed
+#  
+#  @param [str] inFile input image data file
+#  @param [list] operations pipeline operations
+#  @param [list] params pipeline operation params
+#  @param [str] resDir directory path where results are stored
+#  @param [bool] useMostRecent True if most recent files should be checked first
+#  @return [str] preprocessed image file name if exists, None otherwise
+#  	
 def checkXML(inFile, operations, params, resDir, useMostRecent=True):
     fileList = sorted_ls(resDir, useMostRecent)
     for xfile in fileList:
@@ -488,7 +566,13 @@ def checkXML(inFile, operations, params, resDir, useMostRecent=True):
                 rcode = xfile.replace('.xml','')
                 return op.join(resDir,config.fmriRun+'_prepro_'+rcode+config.ext)
     return None
-
+	
+## 
+#  @brief Extract random identifier from preprocessed image filename
+#  
+#  @param  [str] mystring preprocessed image filename
+#  @return [str] string identifier
+#  
 def get_rcode(mystring):
     if not config.isCifti:
         return re.search('.*_(........)\.nii.gz', mystring).group(1)
@@ -506,7 +590,15 @@ def rawgencount(filename):
     f_gen = _make_gen(f.read)
     return sum( buf.count(b'\n') for buf in f_gen )        
 
-
+## 
+#  @brief Replace censored time point by linear interpolation
+#  
+#  @param  [numpy.array] data input image data
+#  @param  [numpy.array] censored volumes to be censored
+#  @param  [float] TR repetition time
+#  @param  [int] nTRs number of time points
+#  @return [numpy.array]image data with interpolated values in censored time points
+#   
 def interpolate(data,censored,TR,nTRs,method='linear'):
     N = data.shape[0]
     tpoints = np.setdiff1d(np.arange(nTRs),censored)
@@ -523,8 +615,8 @@ def interpolate(data,censored,TR,nTRs,method='linear'):
             break
     return data
 
-
-### Operations
+# ---------------------
+# Pipeline Operations
 def MotionRegression(niiImg, flavor, masks, imgInfo):
     # assumes that data is organized as in the HCP
     motionFile = op.join(buildpath(), config.movementRegressorsFile)
@@ -558,7 +650,6 @@ def MotionRegression(niiImg, flavor, masks, imgInfo):
         X = np.concatenate((X, toReg), axis=1)
         
     return X
-
 
 def Scrubbing(niiImg, flavor, masks, imgInfo):
     """
@@ -708,8 +799,6 @@ def TissueRegression(niiImg, flavor, masks, imgInfo):
     else:
         print 'Warning! Wrong tissue regression flavor. Nothing was done'
         
-    
-
 def Detrending(niiImg, flavor, masks, imgInfo):
     maskAll, maskWM_, maskCSF_, maskGM_ = masks
     nRows, nCols, nSlices, nTRs, affine, TR = imgInfo
@@ -775,7 +864,6 @@ def Detrending(niiImg, flavor, masks, imgInfo):
     else:
         niiImg[0] = volData            
     return niiImg[0],niiImg[1]     
-
    
 def TemporalFiltering(niiImg, flavor, masks, imgInfo):
     maskAll, maskWM_, maskCSF_, maskGM_ = masks
@@ -846,7 +934,7 @@ def VoxelNormalization(niiImg, flavor, masks, imgInfo):
         print 'Warning! Wrong normalization flavor. Nothing was done'
     return niiImg[0],niiImg[1] 
 
-
+# Struct used to associate functions to operation names
 Hooks={
     'MotionRegression'       : MotionRegression,
     'Scrubbing'              : Scrubbing,
@@ -857,7 +945,14 @@ Hooks={
     'VoxelNormalization'     : VoxelNormalization,
     }
 
+### End of Operations section
+# ---------------------------
 
+## 
+#  @brief Compute frame displacement
+#  
+#  @return [np.array] frame displacement score
+#  
 def computeFD():
     # Frame displacement
     motionFile = op.join(buildpath(), config.movementRegressorsFile)
@@ -868,6 +963,12 @@ def computeFD():
     score=np.sum(disp,1)
     return score
 
+## 
+#  @brief Generate gray plot
+#  
+#  @param [bool] displayPlot True if plot should be displayed
+#  @param [bool] overwrite True if existing files should be overwritten
+#  
 def makeGrayPlot(displayPlot=False,overwrite=False):
     savePlotFile = config.fmriFile_dn.replace(config.ext,'_grayplot.png')
     if not op.isfile(savePlotFile) or overwrite:
@@ -959,7 +1060,9 @@ def makeGrayPlot(displayPlot=False,overwrite=False):
         plt.show(fig)
     else:
         plt.close(fig)
-
+## 
+#  @brief Apply parcellation (output saved to file)
+#  
 def parcellate(overwrite=False):
     print "entering parcellate (overwrite={})".format(overwrite)
     # After preprocessing, functional connectivity is computed
@@ -1041,6 +1144,11 @@ def parcellate(overwrite=False):
         cmd = 'paste '+op.join(tsDir,'parcel???_{}.txt'.format(rstring))+' > '+alltsFile
         call(cmd, shell=True)
 
+## 
+#  @brief Compute functional connectivity matrix (output saved to file)
+#  
+#  @param [bool] overwrite True if existing files should be overwritten
+#  
 def computeFC(overwrite=False):
     print "entering computeFC (overwrite={})".format(overwrite)
     tsDir = op.join(buildpath(),config.parcellationName,config.fmriRun+config.ext)
@@ -1079,7 +1187,14 @@ def computeFC(overwrite=False):
         # np.fill_diagonal(corrMat,1)
         # save as .txt
         np.savetxt(fcFile,corrMat,fmt='%.6f',delimiter=',')
-      
+		
+## 
+#  @brief Compute functional connectivity matrices before and after preprocessing and generate FC plot
+#  
+#  @param  [bool] displayPlot True if plot should be displayed
+#  @param  [bool] overwrite True if existing files should be overwritten
+#  @return [tuple] functional connectivity matrix before and after denoising
+#     
 def plotFC(displayPlot=False,overwrite=False):
     print "entering plotFC (overwrite={})".format(overwrite)
     savePlotFile=config.fmriFile_dn.replace(config.ext,'_'+config.parcellationName+'_fcMat.png')
@@ -1138,7 +1253,14 @@ def plotFC(displayPlot=False,overwrite=False):
 
     return fcMat,fcMat_dn
 
-
+## 
+#  @brief Generate confound vector according to code word
+#  
+#  @param  [pandas.DataFrame] df data dictionary
+#  @param  [int] confound code word identifying list of counfounds (one of 'gender', 'age', 'handedness', 'age^2', 'gender*age', 'gender*age^2', 'brainsize', 'motion', 'recon')
+#  @param  [int] session session identifier (one of 'REST1', 'REST2', 'REST12')
+#  @return [array_like] vector of confounds
+#  
 def defConVec(df,confound,session):
     if confound == 'gender':
         conVec = df['Gender']
@@ -1165,7 +1287,26 @@ def defConVec(df,confound,session):
         conVec = df['PMAT24_A_CR']
     return conVec
 
-
+## 
+#  @brief Compute prediction of subject measure (output saved to file)
+#  
+#  @param     [str] fcMatFile filename of functional connectivity matrices file
+#  @param     [str] dataFile filename of subject measures data frame
+#  @param     [int] test_index index of the subject whose score will be predicted
+#  @param     [float] filterThr threshold for p-value to select edges correlated with subject measure
+#  @param     [str] keepEdgeFile name of file containing a mask to select a subset of edge (optional)
+#  @iPerm     [array_like] vector of permutation indices, if [0] no permutation test is run
+#  @SM        [str] subject measure name
+#  @session   [str] session identifier (one of 'REST1', 'REST2, 'REST12')
+#  @model     [str] regression model type (either 'Finn' or 'elnet')
+#  @outDir    [str] output directory
+#  @confounds [list] confound vector
+#  
+#  @details The edges of FC matrix are used to build a linear regression model to predict the subject measure. Finn model uses a first degree 
+#  polynomial to fit the subject measure as a function of the sum of edge weights. Elastic net builds a multivariate model using the edges of 
+#  the FC matrix as features. In both models, only edges correlated with the subject measure on training data are selected, and counfounds are
+#  regressed out from the subject measure. If requested, a permutation test is also run.
+#  
 def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFile='', iPerm=[0], SM='PMAT24_A_CR', session='REST12', decon='decon', fctype='Pearson', model='Finn',outDir='',confounds=['gender','age','age^2','gender*age','gender*age^2','brainsize','motion','recon']):
     data         = sio.loadmat(fcMatFile)
     edges        = data['fcMats_'+fctype]
@@ -1304,6 +1445,23 @@ def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFil
             sio.savemat(outFile,results)        
         sys.stdout.flush()
     
+## 
+#  @brief Run predictions for all subjects in parallel using sge qsub
+#  
+#  @param     [str] fcMatFile filename of functional connectivity matrices file
+#  @param     [str] dataFile filename of subject measures data frame
+#  @SM        [str] subject measure name
+#  @iPerm     [array_like] vector of permutation indices, if [0] no permutation test is run
+#  @confounds [list] confound vector
+#  @param     [bool] launchSubproc if False, prediction are computed sequentially instead of being submitted to a queue for parallel computation 
+#  @session   [str] session identifier (one of 'REST1', 'REST2, 'REST12')
+#  @model     [str] regression model type (either 'Finn' or 'elnet')
+#  @outDir    [str] output directory
+#  @param     [float] filterThr threshold for p-value to select edges correlated with subject measure
+#  @param     [str] keepEdgeFile name of file containing a mask to select a subset of edge (optional)
+#  
+#  @details Predictions for all subjects are run using a leave-family-out cross validation scheme.
+#  
 def runPredictionParJD(fcMatFile, dataFile, SM='PMAT24_A_CR', iPerm=[0], confounds=['gender','age','age^2','gender*age','gender*age^2','brainsize','motion','recon'], launchSubproc=False, session='REST12',decon='decon',fctype='Pearson',model='Finn', outDir = '', filterThr=0.01, keepEdgeFile=''):
     data = sio.loadmat(fcMatFile)
     df   = pd.read_csv(dataFile)
@@ -1386,7 +1544,9 @@ def runPredictionParJD(fcMatFile, dataFile, SM='PMAT24_A_CR', iPerm=[0], confoun
         JobID = fnSubmitJobArrayFromJobList()
         config.joblist.append(JobID.split('.')[0])
 
-#@profile
+## 
+#  @brief Run preprocessing pipeline (output saved to file)
+#  
 def runPipeline():
 
     Flavors = config.Flavors
@@ -1481,6 +1641,13 @@ def runPipeline():
 
     return
 
+## 
+#  @brief Run preprocessing pipeline on all subjects in parallel using sge qsub
+#  
+#  @param [bool] launchSubproc if False, prediction are computed sequentially instead of being submitted to a queue for parallel computation
+#  @param [bool] overwriteFC True if existing FC matrix files should be overwritten 
+#  @param [bool] cleanup True if old files should be removed
+#  
 def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
     if config.queue: 
         priority=-100
@@ -1804,7 +1971,6 @@ def factor_analysis(X,s=2):
 
     return B,L,var,fac,E
     
-
 def partialcorr_via_linreg(X):
     # standardize
     X -= X.mean(axis=0)
