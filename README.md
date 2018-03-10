@@ -15,10 +15,11 @@ The following files are included:
   * *intelligence.ipynb* : reproduces analyses in 
   > Dubois, J., Galdi, P., Paul, L.K. and Adolphs, R. A distributed brain network predicts general intelligence from resting-state human neuroimaging data. Under review. Preprint: https://www.biorxiv.org/content/early/2018/01/31/257865
 
+  * *recomputeNEOFFIfactors.ipynb* : standalone notebook which can be used to correct NEOFAC_A [agreeableness factor] (see https://www.mail-archive.com/hcp-users@humanconnectome.org/msg05266.html: it appears that one of the test items was not properly reverse coded to compute the agreeableness factor). Data downloaded on 03/08/2018 was found to still be affected by the bug
 
 If you use this code, please **cite the most relevant of these two papers**. 
 
-## Prerequisites
+## Prerequisites.
 
 In order to run the provided code the following packages are needed:
 
