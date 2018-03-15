@@ -10,10 +10,10 @@ The following files are included:
   * *HCP_helpers.py* : contains all helper functions and module imports for resting-state fMRI preprocessing, and prediction of behavior
 
   * *personality.ipynb* : reproduces analyses in 
-  > Dubois, J.\*, Galdi, P.\*, Han, Y., Paul, L.K. and Adolphs, R. Resting-state functional brain connectivity best predicts the personality dimension of openness to experience. In revision, to appear in *Personality Neuroscience*. Preprint: https://www.biorxiv.org/content/early/2017/11/07/215129
+  > Dubois, J.\*, Galdi, P.\*, Han, Y., Paul, L.K. and Adolphs, R. Resting-state functional brain connectivity best predicts the personality dimension of openness to experience. *Personality Neuroscience*, in press. Preprint: https://www.biorxiv.org/content/early/2018/03/02/215129
 
   * *intelligence.ipynb* : reproduces analyses in 
-  > Dubois, J., Galdi, P., Paul, L.K. and Adolphs, R. A distributed brain network predicts general intelligence from resting-state human neuroimaging data. Under review. Preprint: https://www.biorxiv.org/content/early/2018/01/31/257865
+  > Dubois, J., Galdi, P., Paul, L.K. and Adolphs, R. A distributed brain network predicts general intelligence from resting-state human neuroimaging data. *Philosophical Transactions of the Royal Society B*, in revision. Preprint: https://www.biorxiv.org/content/early/2018/01/31/257865
 
   * *recomputeNEOFFIfactors.ipynb* : standalone notebook which can be used to correct NEOFAC_A [agreeableness factor] (see https://www.mail-archive.com/hcp-users@humanconnectome.org/msg05266.html: it appears that one of the test items was not properly reverse coded to compute the agreeableness factor). Data downloaded on 03/08/2018 was found to still be affected by the bug
 
