@@ -1386,9 +1386,9 @@ def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFil
         pears  = [stats.pearsonr(np.squeeze(edges[train_index,j]),score[train_index]) for j in range(0,n_edges)]
         pearsR = [pears[j][0] for j in range(0,n_edges)]
         
-        idx_filtered     = np.array([idx for idx in range(1,n_edges) if pears[idx][1]<filterThr])
-        idx_filtered_pos = np.array([idx for idx in range(1,n_edges) if pears[idx][1]<filterThr and pears[idx][0]>0])
-        idx_filtered_neg = np.array([idx for idx in range(1,n_edges) if pears[idx][1]<filterThr and pears[idx][0]<0])
+        idx_filtered     = np.array([idx for idx in range(0,n_edges) if pears[idx][1]<filterThr])
+        idx_filtered_pos = np.array([idx for idx in range(0,n_edges) if pears[idx][1]<filterThr and pears[idx][0]>0])
+        idx_filtered_neg = np.array([idx for idx in range(0,n_edges) if pears[idx][1]<filterThr and pears[idx][0]<0])
             
         if model=='Finn':
             print model
