@@ -34,7 +34,7 @@ In order to run the provided code the following packages are needed:
 - seaborn==0.8.1
 - scikit_learn==0.19.1
 
-## Instruction for launching:
+## Instruction for launching
 1. Customize parameters
 	* In the notebook in cell <b>Set Parameters</b>
 2. Launch the pipeline
@@ -172,3 +172,6 @@ Note: if scrubbing has been requested, censored volumes are replaced by linear i
 	1. Specify standard deviation.</ol>
 
 Example: `['TemporalFiltering',       7, ['Butter', 0.009, 0.08]]`
+
+## Changelog
+- 04/24/2018: Fixed indexing bug in the feature selection step (lines 1389-1391 in HCP_helpers.py). Prior to this date the feature selection step was performed on features indexed by range(1,n_edges) instead of range(0,n_edges), always discarding the first (0-indexed) feature. As a consequence, there might be slight discrepancies in analyses run before and after the fix.
