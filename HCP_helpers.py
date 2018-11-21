@@ -50,6 +50,8 @@ from subprocess import call, check_output, CalledProcessError, Popen
 import nibabel as nib
 import sklearn.model_selection as cross_validation
 from sklearn.linear_model import ElasticNetCV
+from sklearn.svm import SVR
+from sklearn.model_selection import GridSearchCV
 from sklearn import linear_model,feature_selection,preprocessing
 from sklearn.preprocessing import RobustScaler
 from sklearn.covariance import MinCovDet,GraphLassoCV
@@ -245,6 +247,8 @@ def load_img(volFile,maskAll=None,unzip=config.useMemMap):
             data = data.reshape((nRows*nCols*nSlices,data.shape[3]), order='F')[maskAll,:]
     else:
         if nTRs==1:
+            print volFile
+            print maskAll.shape,nRows*nCols*nSlices
             data = np.asarray(img.dataobj).reshape(nRows*nCols*nSlices, order='F')[maskAll]
         else:
             data = np.asarray(img.dataobj).reshape((nRows*nCols*nSlices,nTRs), order='F')[maskAll,:]
@@ -1308,6 +1312,10 @@ def defConVec(df,confound,session):
 #  regressed out from the subject measure. If requested, a permutation test is also run.
 #  
 def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFile='', iPerm=[0], SM='PMAT24_A_CR', session='REST12', decon='decon', fctype='Pearson', model='Finn',outDir='',confounds=['gender','age','age^2','gender*age','gender*age^2','brainsize','motion','recon']):
+    print dataFile
+    print fcMatFile
+    print test_index
+
     data         = sio.loadmat(fcMatFile)
     edges        = data['fcMats_'+fctype]
 
@@ -1322,7 +1330,9 @@ def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFil
     score        = np.array(np.ravel(df[SM]))
 
     train_index = np.setdiff1d(np.arange(n_subs),test_index)
-    
+
+    print train_index
+
     # REMOVE CONFOUNDS
     conMat = None
     if len(confounds)>0:
@@ -1442,7 +1452,7 @@ def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFil
             prediction     = elnet.predict(X_test)
             results        = {'score':y_test,'pred':prediction, 'coef':elnet.coef_, 'alpha':elnet.alpha_, 'l1_ratio':elnet.l1_ratio_, 'idx_filtered':idx_filtered}
             print 'saving results'
-            sio.savemat(outFile,results)        
+            sio.savemat(outFile,results) 
         sys.stdout.flush()
     
 ## 
@@ -1462,7 +1472,7 @@ def runPredictionJD(fcMatFile, dataFile, test_index, filterThr=0.01, keepEdgeFil
 #  
 #  @details Predictions for all subjects are run using a leave-family-out cross validation scheme.
 #  
-def runPredictionParJD(fcMatFile, dataFile, SM='PMAT24_A_CR', iPerm=[0], confounds=['gender','age','age^2','gender*age','gender*age^2','brainsize','motion','recon'], launchSubproc=False, session='REST12',decon='decon',fctype='Pearson',model='Finn', outDir = '', filterThr=0.01, keepEdgeFile=''):
+def runPredictionParJD(fcMatFile, dataFile, SM='PMAT24_A_CR', iPerm=[0], confounds=['gender','age','age^2','gender*age','gender*age^2','brainsize','motion','recon'], launchSubproc=0, session='REST12',decon='decon',fctype='Pearson',model='Finn', outDir = '', filterThr=0.01, keepEdgeFile=''):
     data = sio.loadmat(fcMatFile)
     df   = pd.read_csv(dataFile)
     # leave one family out
@@ -1535,6 +1545,9 @@ def runPredictionParJD(fcMatFile, dataFile, SM='PMAT24_A_CR', iPerm=[0], confoun
             sys.stdout.flush()
             process = Popen(thisScript,shell=True)
             config.joblist.append(process)
+            if len(config.joblist)>=launchSubproc:
+                checkProgress(pause=2,verbose=False)
+                config.joblist=list()
         else:
             runPredictionJD(fcMatFile,dataFile,test_index,filterThr=filterThr,keepEdgeFile=keepEdgeFile,SM=SM, session=session, decon=decon, fctype=fctype, model=model, outDir=outDir, confounds=confounds,iPerm=jPerm)
         iCV = iCV +1
@@ -1648,7 +1661,7 @@ def runPipeline():
 #  @param [bool] overwriteFC True if existing FC matrix files should be overwritten 
 #  @param [bool] cleanup True if old files should be removed
 #  
-def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
+def runPipelinePar(launchSubproc=0,overwriteFC=False,cleanup=True):
     if config.queue: 
         priority=-100
     config.suffix = '_hp2000_clean' if config.useFIX else '' 
@@ -1819,8 +1832,9 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
             sys.stdout.flush()
             process = Popen(thisScript,shell=True)
             config.joblist.append(process)
-            print 'submitted {}'.format(jobName)
-    
+            if len(config.joblist)>=launchSubproc:
+                checkProgress(pause=2,verbose=False)
+                config.joblist=list()
     else:
     
         if precomputed and not config.overwrite:

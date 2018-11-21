@@ -175,3 +175,4 @@ Example: `['TemporalFiltering',       7, ['Butter', 0.009, 0.08]]`
 
 ## Changelog
 - 04/24/2018: Fixed indexing bug in the feature selection step (lines 1389-1391 in HCP_helpers.py). Prior to this date the feature selection step was performed on features indexed by range(1,n_edges) instead of range(0,n_edges), always discarding the first (0-indexed) feature. As a consequence, there might be slight discrepancies in analyses run before and after the fix.
+- 11/21/2018: Fixed subject selection bug; the code did not properly discard subjects with incomplete RS data. The original code included 11 subjects with less than 4800 timepoints [119732,119833,140420,150423,159946,169747,196952,202820,317332,644246,751550]. The total number of selected subjects for the analyses is now 874 (instead of 885). Thanks to Feilong Ma (@feilong) for pointing this out.
