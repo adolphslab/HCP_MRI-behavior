@@ -112,6 +112,7 @@ config.operationDict = {
 #### Voxel Normalization
 * <b>zscore:</b> convert each voxel’s time course to z-score (remove mean, divide by standard deviation).
 * <b>demean:</b> substract the mean from each voxel's time series.
+* <b>pcSigCh:</b> convert each voxel’s time course to % signal change (remove mean, divide by mean, multiply by 100)
 
 Example: `['VoxelNormalization',      1, ['zscore']]`
 #### Detrending
@@ -127,17 +128,28 @@ Example: `['Detrending',      2, ['poly', 3, 'GM']]`
 Note: R = [X Y Z pitch yaw roll]<br>
 Note: if temporal filtering has already been performed, the motion regressors are filtered too. <br>
 Note: if scrubbing has been requested, a regressor is added for each volume to be censored; the censoring option performs only scrubbing.
-* <b>R dR:</b> translational and rotational realignment parameters (R) and their temporal derivatives are used as explanatory variables in motion regression.
-* <b>R dR R^2 dR^2:</b>: realignment parameters (R) with their derivatives (dR), quadratic terms (R^2) and square of derivatives (dR^2) are used in motion regression.
+* <b>R:</b> translational and rotational realignment parameters (R) are used as explanatory variables in motion regression.
+* <b>R dR:</b> translational and rotational realignment parameters (R) and their temporal derivatives (dR) are used as explanatory variables in motion regression.
+* <b>R R^2:</b> translational and rotational realignment parameters (R) and their quadratic terms (R^2) are used as explanatory variables in motion regression.
+* <b>R dR R^2 dR^2:</b> realignment parameters (R) with their derivatives (dR), quadratic terms (R^2) and square of derivatives (dR^2) are used in motion regression.
+* <b>R R^2 R-1 R-1^2:</b> realignment parameters at time t (R) and realignment parameters at time t-1 (R-1) with their square terms are used in motion regression.
+* <b>R R^2 R-1 R-1^2 R-2 R-2^2:</b> realignment parameters at time t (R), t-1 (R-1) and t-2 (R-2) with their square terms are used in motion regression.
 * <b>censoring:</b> for each volume tagged for scrubbing, a unit impulse function  with a value of 1 at that time point and 0 elsewhere is included as a regressor.
+* <b>ICA-AROMA:</b> ICA is used to identify noise components that are used as regressors.
 
 Example: `['MotionRegression',      3, ['R dR']]`
 #### Scrubbing
 Note: this step only flags the volumes to be censored, that are then regressed out in the MotionRegression step.<br>
 Note: uncensored segments of data lasting fewer than 5 contiguous volumes, are flagged for removal as well.
+* <b>FD</b>
+	1. Specify a threshold for framewise displacement (FD) in mm.
+	2. Specify number of adjacent volumes to exclude (optional).
+* <b>DVARS</b>
+	1. Specify a threshold for variance of differentiated signal (DVARS).
+	2. Specify number of adjacent volumes to exclude (optional).
 * <b>FD+DVARS</b>
 	1. Specify a threshold for framewise displacement (FD) in mm.
-	2. Specify a threshold <i>t</i> s.t. volumes with a variance of differentiated signal (DVARS) greater than (100 + <i>t</i>)% of the run median DVARS are flagged for removal.
+	2. Specify a threshold <i>t</i> s.t. volumes with a variance of differentiated signal (DVARS) greater than (100 + <i>t</i>)% of the run median DVARS are flagged for removal (as in Siegel et al, Cerebral Cortex, 2016).
 	3. Specify number of adjacent volumes to exclude (optional).
 * <b>RMS</b>
 	1. Specify threshold for root mean square displacement in mm.
@@ -147,7 +159,11 @@ Example: `['Scrubbing',      4, ['FD+DVARS', 0.25, 5]]`
 #### Tissue Regression 
 * <b>GM:</b> the gray matter signal is added as a regressor.
 	1. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain')
+* <b>WM:</b> the white matter signal is added as a regressor.
+	1. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain')
 * <b>WMCSF:</b> white matter and cerebrospinal fluid signals are added as regressors.
+	1. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain')
+* <b>WMCSF+dt:</b> white matter and cerebrospinal fluid signals with their derivatives		 are added as regressors.
 	1. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain')
 * <b>WMCSF+dt+sq:</b> white matter and cerebrospinal fluid signals with their derivatives and quadratic terms are added as regressors.
 	1. Specify if regression should be performed on gray matter signal ('GM') or whole brain signal ('wholebrain')
@@ -160,16 +176,20 @@ Example: `['TissueRegression',        5, ['CompCor', 5, 'WMCSF', 'wholebrain']]`
 
 #### Global Signal Regression
 * <b>GS:</b> the global signal is added as a regressor.
-* <b>GS+dt+sq:</b> the global signal with its derivative and square term are added as regressors.
+* <b>GS+dt+sq:</b> the global signal with its derivatives are added as regressors.
+* <b>GS+dt+sq:</b> the global signal with its derivatives and square term are added as regressors.
 
 Example: `['GlobalSignalRegression',      6, ['GS+dt+sq']]`
 #### Temporal Filtering
 Note: if scrubbing has been requested, censored volumes are replaced by linear interpolation.
 * <b>Butter:</b> Butterworth band pass filtering.
 	1. Specify high pass threshold.
-	2. Specify low pass threshold. </ol>
+	2. Specify low pass threshold. 
 * <b>Gaussian:</b> Low pass Gaussian smoothing.
-	1. Specify standard deviation.</ol>
+	1. Specify standard deviation.
+* <b>DCT:</b> The discrete cosine transform is used to compute regressors to perform temporal filtering.
+	1. Specify high pass threshold.
+	2. Specify low pass threshold. 
 
 Example: `['TemporalFiltering',       7, ['Butter', 0.009, 0.08]]`
 
