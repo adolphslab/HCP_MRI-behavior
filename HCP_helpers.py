@@ -21,7 +21,7 @@ class config(object):
     useNative          = False
     parcellationName   = ''
     parcellationFile   = ''
-	outDir             = 'rsDenoise'								
+    outDir             = 'rsDenoise'								
     FCDir              = 'FC'
     headradius         = 50 #50mm as in Powers et al. 2012
     melodicFolder      =  op.join('#fMRIrun#_hp2000.ica','filtered_func_data.ica') #the code #fMRIrun# will be replaced
@@ -1753,7 +1753,7 @@ def parcellate(overwrite=False):
     # After preprocessing, functional connectivity is computed
     tsDir = op.join(outpath(),config.parcellationName)
     if not op.isdir(tsDir): mkdir(tsDir)
-	prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
+    prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
     tsDir = op.join(tsDir,prefix+config.fmriRun+config.ext)
     if not op.isdir(tsDir): mkdir(tsDir)
 
@@ -2025,7 +2025,7 @@ def plotFC(displayPlot=False,overwrite=False):
 
     if not op.isfile(savePlotFile) or overwrite:
         computeFC(overwrite)
-	prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
+    prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
     tsDir      = op.join(outpath(),config.parcellationName,prefix+config.fmriRun+config.ext)
     fcFile     = op.join(tsDir,'allParcels_Pearson.txt')
     fcMat      = np.genfromtxt(fcFile,delimiter=",")
@@ -2389,7 +2389,7 @@ def runPipeline():
 
     if config.isCifti:
         # volume
-		prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
+        prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
         volFile = op.join(buildpath(), prefix+config.fmriRun+'.nii.gz')
         print('Loading [volume] data in memory... {}'.format(volFile))
         volData, nRows, nCols, nSlices, nTRs, affine, TR, header = load_img(volFile, maskAll) 
@@ -2447,7 +2447,7 @@ def runPipeline():
     print('Done! Copy the resulting file...')
     rstring = ''.join(random.SystemRandom().choice(string.ascii_lowercase +string.ascii_uppercase + string.digits) for _ in range(8))
     outDir  = outpath()
-	prefix = config.session+'_' if  hasattr(config,'session')  else ''															  
+    prefix = config.session+'_' if  hasattr(config,'session')  else ''															  
     outFile = prefix+config.fmriRun+'_prepro_'+rstring
     if config.isCifti:
         # write to text file
@@ -2494,7 +2494,7 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
     if hasattr(config,'fmriFileTemplate'):
         config.fmriFile = op.join(buildpath(), config.fmriFileTemplate.replace('#fMRIrun#', config.fmriRun).replace('#suffix#',config.suffix))
     else:
-		prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
+        prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
         if config.isCifti:
             config.fmriFile = op.join(buildpath(), prefix+config.fmriRun+'_Atlas'+config.suffix+'.dtseries.nii')
         else:
