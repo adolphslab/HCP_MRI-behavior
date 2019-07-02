@@ -21,6 +21,7 @@ class config(object):
     useNative          = False
     parcellationName   = ''
     parcellationFile   = ''
+	outDir             = 'rsDenoise'								
     FCDir              = 'FC'
     headradius         = 50 #50mm as in Powers et al. 2012
     melodicFolder      =  op.join('#fMRIrun#_hp2000.ica','filtered_func_data.ica') #the code #fMRIrun# will be replaced
@@ -81,6 +82,21 @@ from nistats import design_matrix
 #----------------------------------
 def buildpath():
     return op.join(config.DATADIR, config.subject,'MNINonLinear','Results',config.fmriRun)
+#----------------------------------
+# function to build dinamycally output path (BIDS-like) 
+#----------------------------------
+def outpath():
+    if not op.isdir(config.outDir): mkdir(config.outDir)
+    outPath = op.join(config.outDir,'denoise_'+config.pipelineName)
+    if not op.isdir(outPath): mkdir(outPath)
+    outPath = op.join(outPath,config.subject)
+    if not op.isdir(outPath): mkdir(outPath)
+    if hasattr(config, 'session') and config.session:
+        outPath = op.join(outPath,config.session)
+        if not op.isdir(outPath): mkdir(outPath)
+    outPath = op.join(outPath,config.fmriRun)
+    if not op.isdir(outPath): mkdir(outPath)
+    return outPath
 
 
 #----------------------------------
@@ -223,7 +239,7 @@ config.operationDict = {
 #  
 def filter_regressors(regressors, filtering, nTRs, TR):
     if len(filtering)==0:
-        print('Error! Missing or wrong filtering flavor. Regressors were not filtered.')
+        print('Warning! Missing or wrong filtering flavor. Regressors were not filtered.')
     else:
         if filtering[0] == 'Butter':
             regressors = clean(regressors, detrend=False, standardize=False, 
@@ -333,9 +349,9 @@ def load_img(volFile,maskAll=None,unzip=config.useMemMap):
 #  
 def makeTissueMasks(overwrite=False,precomputed=False):
     fmriFile = config.fmriFile
-    WMmaskFileout = op.join(buildpath(), 'WMmask.nii')
-    CSFmaskFileout = op.join(buildpath(), 'CSFmask.nii')
-    GMmaskFileout = op.join(buildpath(), 'GMmask.nii')
+    WMmaskFileout = op.join(outpath(), 'WMmask.nii')
+    CSFmaskFileout = op.join(outpath(), 'CSFmask.nii')
+    GMmaskFileout = op.join(outpath(), 'GMmask.nii')
     
     if not op.isfile(GMmaskFileout) or overwrite:
         # load ribbon.nii.gz and wmparc.nii.gz
@@ -344,12 +360,12 @@ def makeTissueMasks(overwrite=False,precomputed=False):
         ribbonFilein = op.join(buildpath(),'ribbon.nii.gz')
         wmparcFilein = op.join(buildpath(), 'wmparc.nii.gz')
         # make sure it is resampled to the same space as the functional run
-        ribbonFileout = op.join(buildpath(), 'ribbon.nii.gz')
-        wmparcFileout = op.join(buildpath(), 'wmparc.nii.gz')
+        ribbonFileout = op.join(outpath(), 'ribbon.nii.gz')
+        wmparcFileout = op.join(outpath(), 'wmparc.nii.gz')
         # make identity matrix to feed to flirt for resampling
-        ribbonMat = op.join(buildpath(), 'ribbon_flirt_{}.mat'.format(config.pipelineName))
-        wmparcMat = op.join(buildpath(), 'wmparc_flirt_{}.mat'.format(config.pipelineName))
-        eyeMat = op.join(buildpath(), 'eye_{}.mat'.format(config.pipelineName))
+        ribbonMat = op.join(outpath(), 'ribbon_flirt_{}.mat'.format(config.pipelineName))
+        wmparcMat = op.join(outpath(), 'wmparc_flirt_{}.mat'.format(config.pipelineName))
+        eyeMat = op.join(outpath(), 'eye_{}.mat'.format(config.pipelineName))
         with open(eyeMat,'w') as fid:
             fid.write('1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1')
 
@@ -615,7 +631,7 @@ def sorted_ls(path, reverseOrder):
 #  @param [bool] useMostRecent True if most recent files should be checked first
 #  @return [str] preprocessed image file name if exists, None otherwise
 #  	
-def checkXML(inFile, operations, params, resDir, useMostRecent=True):
+def checkXML(inFile, operations, params, resDir, isCifti=False, useMostRecent=True):
     fileList = sorted_ls(resDir, useMostRecent)
     for xfile in fileList:
         if fnmatch.fnmatch(op.join(resDir,xfile), op.join(resDir,'????????.xml')):
@@ -821,13 +837,13 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
     edgeFract:  Array of the edge fraction feature scores for the components of the melIC file
     csfFract:   Array of the CSF fraction feature scores for the components of the melIC file"""
 
-    EDGEmaskFileout = op.join(buildpath(), 'EDGEmask.nii')
+    EDGEmaskFileout = op.join(outpath(), 'EDGEmask.nii')
 
     if not op.isfile(EDGEmaskFileout):
-        WMmaskFileout = op.join(buildpath(), 'WMmask.nii')
-        CSFmaskFileout = op.join(buildpath(), 'CSFmask.nii')
-        GMmaskFileout = op.join(buildpath(), 'GMmask.nii')
-        OUTmaskFileout = op.join(buildpath(), 'OUTmask.nii')
+        WMmaskFileout = op.join(outpath(), 'WMmask.nii')
+        CSFmaskFileout = op.join(outpath(), 'CSFmask.nii')
+        GMmaskFileout = op.join(outpath(), 'GMmask.nii')
+        OUTmaskFileout = op.join(outpath(), 'OUTmask.nii')
 
         tmpWM = nib.load(WMmaskFileout)
         nRows, nCols, nSlices = tmpWM.header.get_data_shape()
@@ -1063,6 +1079,49 @@ def interpolate(data,censored,TR,nTRs,method='linear'):
             break
     return data
 
+def retrieve_preprocessed(inputFile, operations, outputDir, isCifti):
+    if not op.isfile(inputFile):
+        print(inputFile, 'missing')
+        sys.stdout.flush()
+        return None
+
+    sortedOperations = sorted(operations, key=operator.itemgetter(1))
+    steps            = {}
+    Flavors          = {}
+    cstep            = 0
+
+    # If requested, scrubbing is performed first, before any denoising step
+    scrub_idx = -1
+    curr_idx = -1
+    for opr in sortedOperations:
+        curr_idx = curr_idx+1
+        if opr[0] == 'Scrubbing' and opr[1] != 1 and opr[1] != 0:
+            scrub_idx = opr[1]
+            break
+            
+    if scrub_idx != -1:        
+        for opr in sortedOperations:  
+            if opr[1] != 0:
+                opr[1] = opr[1]+1
+
+        sortedOperations[curr_idx][1] = 1
+        sortedOperations = sorted(operations, key=operator.itemgetter(1))
+
+    prev_step = 0	
+    for opr in sortedOperations:
+        if opr[1]==0:
+            continue
+        else:
+            if opr[1]!=prev_step:
+                cstep=cstep+1
+                steps[cstep] = [opr[0]]
+                Flavors[cstep] = [opr[2]]
+            else:
+                steps[cstep].append(opr[0])
+                Flavors[cstep].append(opr[2])
+            prev_step = opr[1]                
+    precomputed = checkXML(inputFile,steps,Flavors,outputDir,isCifti) 
+    return precomputed 																								 
 # ---------------------
 # Pipeline Operations
 def TaskRegression(niiImg, flavor, masks, imgInfo):
@@ -1200,7 +1259,7 @@ def MotionRegression(niiImg, flavor, masks, imgInfo):
         
     if config.doScrubbing:
         nRows, nCols, nSlices, nTRs, affine, TR, header = imgInfo
-        toCensor = np.loadtxt(op.join(buildpath(), 'Censored_TimePoints_{}.txt'.format(config.pipelineName)), dtype=np.dtype(np.int32))
+        toCensor = np.loadtxt(op.join(outpath(), 'Censored_TimePoints_{}.txt'.format(config.pipelineName)), dtype=np.dtype(np.int32))
         npts = toCensor.size
         if npts==1:
             toCensor=np.reshape(toCensor,(npts,))
@@ -1264,13 +1323,13 @@ def Scrubbing(niiImg, flavor, masks, imgInfo):
         thr2 = flavor[2]
         censDVARS = scoreDVARS > (100+thr2)/100 * np.median(scoreDVARS)
         censored = np.where(np.logical_or(np.ravel(cleanFD)>thr,censDVARS))
-        np.savetxt(op.join(buildpath(), 'FD_{}.txt'.format(config.pipelineName)), cleanFD, delimiter='\n', fmt='%f')
-        np.savetxt(op.join(buildpath(), 'DVARS_{}.txt'.format(config.pipelineName)), scoreDVARS, delimiter='\n', fmt='%f')
+        np.savetxt(op.join(outpath(), 'FD_{}.txt'.format(config.pipelineName)), cleanFD, delimiter='\n', fmt='%f')
+        np.savetxt(op.join(outpath(), 'DVARS_{}.txt'.format(config.pipelineName)), scoreDVARS, delimiter='\n', fmt='%f')
     elif flavor[0] == 'RMS':
         RelRMSFile = op.join(buildpath(), config.movementRelativeRMSFile)
         score = np.loadtxt(RelRMSFile)
         censored = np.where(score>thr)
-        np.savetxt(op.join(buildpath(), '{}_{}.txt'.format(flavor[0],config.pipelineName)), score, delimiter='\n', fmt='%d')
+        np.savetxt(op.join(outpath(), '{}_{}.txt'.format(flavor[0],config.pipelineName)), score, delimiter='\n', fmt='%d')
     else:
         print('Wrong scrubbing flavor. Nothing was done')
         return niiImg[0],niiImg[1]
@@ -1302,7 +1361,7 @@ def Scrubbing(niiImg, flavor, masks, imgInfo):
     censored.sort()
     censored = censored.astype(int)
     
-    np.savetxt(op.join(buildpath(), 'Censored_TimePoints_{}.txt'.format(config.pipelineName)), censored, delimiter='\n', fmt='%d')
+    np.savetxt(op.join(outpath(), 'Censored_TimePoints_{}.txt'.format(config.pipelineName)), censored, delimiter='\n', fmt='%d')
     if len(censored)>0 and len(censored)<nTRs:
         config.doScrubbing = True
     if len(censored) == nTRs:
@@ -1612,10 +1671,11 @@ def makeGrayPlot(displayPlot=False,overwrite=False):
             Xcsf = X[maskCSF_,:]
         else:
             # cifti
-            if not op.isfile(config.fmriFile.replace('.dtseries.nii','.tsv')):
+			 tsvFile = config.fmriFile.replace('.dtseries.nii','.tsv').replace(buildpath(),outpath())
+            if not op.isfile(tsvFile):									  
                 cmd = 'wb_command -cifti-convert -to-text {} {}'.format(config.fmriFile,config.fmriFile.replace('.dtseries.nii','.tsv'))
                 call(cmd,shell=True)
-            Xgm = pd.read_csv(config.fmriFile.replace('.dtseries.nii','.tsv'),sep='\t',header=None,dtype=np.float32).values
+            Xgm = pd.read_csv(tsvFile,sep='\t',header=None,dtype=np.float32).values
             nTRs = Xgm.shape[1]
             Xgm = stats.zscore(Xgm, axis=1, ddof=1)
 
@@ -1646,10 +1706,11 @@ def makeGrayPlot(displayPlot=False,overwrite=False):
             Xcsf = X[maskCSF_,:]
         else:
             # cifti
-            if not op.isfile(config.fmriFile_dn.replace('.dtseries.nii','.tsv')):
-                cmd = 'wb_command -cifti-convert -to-text {} {}'.format(config.fmriFile_dn,config.fmriFile_dn.replace('.dtseries.nii','.tsv'))
+            tsvFile = config.fmriFile.replace('.dtseries.nii','.tsv').replace(buildpath(),outpath())
+            if not op.isfile(tsvFile):
+                cmd = 'wb_command -cifti-convert -to-text {} {}'.format(config.fmriFile_dn,tsvFile)
                 call(cmd,shell=True)
-            Xgm = pd.read_csv(config.fmriFile_dn.replace('.dtseries.nii','.tsv'),sep='\t',header=None,dtype=np.float32).values
+            Xgm = pd.read_csv(tsvFile,sep='\t',header=None,dtype=np.float32).values
             nTRs = Xgm.shape[1]
             Xgm = stats.zscore(Xgm, axis=1, ddof=1)
 
@@ -1690,9 +1751,10 @@ def makeGrayPlot(displayPlot=False,overwrite=False):
 def parcellate(overwrite=False):
     print("entering parcellate (overwrite={})".format(overwrite))
     # After preprocessing, functional connectivity is computed
-    tsDir = op.join(buildpath(),config.parcellationName)
+    tsDir = op.join(outpath(),config.parcellationName)
     if not op.isdir(tsDir): mkdir(tsDir)
-    tsDir = op.join(tsDir,config.fmriRun+config.ext)
+	prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
+    tsDir = op.join(tsDir,prefix+config.fmriRun+config.ext)
     if not op.isdir(tsDir): mkdir(tsDir)
 
     #####################
@@ -1721,11 +1783,11 @@ def parcellate(overwrite=False):
         if not config.isCifti:
             data, nRows, nCols, nSlices, nTRs, affine, TR, header = load_img(config.fmriFile, maskAll)
         else:
-            if not op.isfile(config.fmriFile.replace('.dtseries.nii','.tsv')):
-                cmd = 'wb_command -cifti-convert -to-text {} {}'.format(config.fmriFile,
-                                                                           config.fmriFile.replace('.dtseries.nii','.tsv'))
+            tsvFile = config.fmriFile.replace('.dtseries.nii','.tsv').replace(buildpath(),outpath())
+            if not op.isfile(tsvFile):									  
+                cmd = 'wb_command -cifti-convert -to-text {} {}'.format(config.fmriFile,tsvFile)
                 call(cmd, shell=True)
-            data = pd.read_csv(config.fmriFile.replace('.dtseries.nii','.tsv'),sep='\t',header=None,dtype=np.float32).values
+            data = pd.read_csv(tsvFile,sep='\t',header=None,dtype=np.float32).values
         
         for iParcel in np.arange(config.nParcels):
             tsFile = op.join(tsDir,'parcel{:03d}.txt'.format(iParcel+1))
@@ -1963,7 +2025,8 @@ def plotFC(displayPlot=False,overwrite=False):
 
     if not op.isfile(savePlotFile) or overwrite:
         computeFC(overwrite)
-    tsDir      = op.join(buildpath(),config.parcellationName,config.fmriRun+config.ext)
+	prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
+    tsDir      = op.join(outpath(),config.parcellationName,prefix+config.fmriRun+config.ext)
     fcFile     = op.join(tsDir,'allParcels_Pearson.txt')
     fcMat      = np.genfromtxt(fcFile,delimiter=",")
     rstring    = get_rcode(config.fmriFile_dn)
@@ -2308,7 +2371,7 @@ def runPredictionParJD(fcMatFile, dataFile, SM='PMAT24_A_CR', iPerm=[0], confoun
     if len(config.scriptlist)>0:
         # launch array job
         JobID = fnSubmitJobArrayFromJobList()
-        config.joblist.append(JobID.split('.')[0])
+        config.joblist.append(JobID.split(b'.')[0])
 
 ## 
 #  @brief Run preprocessing pipeline (output saved to file)
@@ -2326,7 +2389,8 @@ def runPipeline():
 
     if config.isCifti:
         # volume
-        volFile = op.join(buildpath(), config.fmriRun+'.nii.gz')
+		prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
+        volFile = op.join(buildpath(), prefix+config.fmriRun+'.nii.gz')
         print('Loading [volume] data in memory... {}'.format(volFile))
         volData, nRows, nCols, nSlices, nTRs, affine, TR, header = load_img(volFile, maskAll) 
         # cifti
@@ -2382,8 +2446,9 @@ def runPipeline():
 
     print('Done! Copy the resulting file...')
     rstring = ''.join(random.SystemRandom().choice(string.ascii_lowercase +string.ascii_uppercase + string.digits) for _ in range(8))
-    outDir  = buildpath()
-    outFile = config.fmriRun+'_prepro_'+rstring
+    outDir  = outpath()
+	prefix = config.session+'_' if  hasattr(config,'session')  else ''															  
+    outFile = prefix+config.fmriRun+'_prepro_'+rstring
     if config.isCifti:
         # write to text file
         np.savetxt(op.join(outDir,outFile+'.tsv'),data, delimiter='\t', fmt='%.6f')
@@ -2395,12 +2460,12 @@ def runPipeline():
     else:
         niiImg = np.zeros((nRows*nCols*nSlices, nTRs),dtype=np.float32)
         niiImg[maskAll,:] = data
-        nib.save(nib.Nifti1Image(niiImg.reshape((nRows, nCols, nSlices, nTRs), order='F').astype('<f4'), affine),op.join(outDir,outFile+'.nii.gz'))
+        nib.save(nib.Nifti1Image(niiImg.reshape((nRows, nCols, nSlices, nTRs), order='F').astype('<f4'), affine, header=header),op.join(outDir,outFile+'.nii.gz'))
 
     timeEnd = localtime()  
 
     outXML = rstring+'.xml'
-    conf2XML(config.fmriFile, config.DATADIR, sortedOperations, timeStart, timeEnd, op.join(buildpath(),outXML))
+    conf2XML(config.fmriFile, config.DATADIR, sortedOperations, timeStart, timeEnd, op.join(outpath(),outXML))
 
     print('Preprocessing complete. ')
     config.fmriFile_dn = op.join(outDir,outFile+config.ext)
@@ -2429,10 +2494,11 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
     if hasattr(config,'fmriFileTemplate'):
         config.fmriFile = op.join(buildpath(), config.fmriFileTemplate.replace('#fMRIrun#', config.fmriRun).replace('#suffix#',config.suffix))
     else:
+		prefix = config.session+'_' if  hasattr(config,'session')  else ''																  
         if config.isCifti:
-            config.fmriFile = op.join(buildpath(), config.fmriRun+'_Atlas'+config.suffix+'.dtseries.nii')
+            config.fmriFile = op.join(buildpath(), prefix+config.fmriRun+'_Atlas'+config.suffix+'.dtseries.nii')
         else:
-            config.fmriFile = op.join(buildpath(), config.fmriRun+config.suffix+'.nii.gz')
+            config.fmriFile = op.join(buildpath(), prefix+config.fmriRun+config.suffix+'.nii.gz')
     
     if not op.isfile(config.fmriFile):
         print(config.fmriFile, 'missing')
@@ -2474,7 +2540,7 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
                 config.steps[cstep].append(opr[0])
                 config.Flavors[cstep].append(opr[2])
             prev_step = opr[1]                
-    precomputed = checkXML(config.fmriFile,config.steps,config.Flavors,buildpath()) 
+    precomputed = checkXML(config.fmriFile,config.steps,config.Flavors,outpath(),config.isCifti) 
 
     if precomputed and not config.overwrite:
         do_makeGrayPlot    = False
@@ -2497,14 +2563,14 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
             except OSError:
                 pass
             try:
-                remove(op.join(buildpath(),get_rcode(precomputed)+'.xml'))
+                remove(op.join(outpath(),get_rcode(precomputed)+'.xml'))
             except OSError:
                 pass
         do_makeGrayPlot = True
         do_plotFC       = True
 
     if config.queue or launchSubproc:
-        jobDir = op.join(buildpath(),'jobs')
+        jobDir = op.join(config.outDir,'jobs')
         if not op.isdir(jobDir): 
             mkdir(jobDir)
         jobName = 's{}_{}_{}_cifti{}_{}'.format(config.subject,config.fmriRun,config.pipelineName,config.isCifti,timestamp())
@@ -2542,6 +2608,8 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
         thispythonfn += 'config.nParcels         = {}\n'.format(config.nParcels)
         if hasattr(config, 'melodicFolder'): 
             thispythonfn += 'config.melodicFolder    = "{}"\n'.format(config.melodicFolder.replace('#fMRIrun#', config.fmriRun))
+        if hasattr(config, 'session'): 
+            thispythonfn += 'config.session    = "{}"\n'.format(config.session)
         thispythonfn += 'config.movementRegressorsFile      = "{}"\n'.format(config.movementRegressorsFile)
         thispythonfn += 'config.movementRelativeRMSFile         = "{}"\n'.format(config.movementRelativeRMSFile)
         if precomputed and not config.overwrite:
@@ -2557,7 +2625,7 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
                 thispythonfn += 'try:\n    remove(config.fmriFile.replace(".gz",""))\nexcept OSError:\n    pass\n'
                 thispythonfn += 'try:\n    remove(config.fmriFile_dn.replace(".gz",""))\nexcept OSError:\n    pass\n'
             if config.isCifti:
-                thispythonfn += 'for f in glob.glob(config.fmriFile.replace("_Atlas","").replace(".dtseries.nii","*.tsv")): os.remove(f)\n'
+                thispythonfn += 'for f in glob.glob(config.fmriFile_dn.replace(".dtseries.nii","*.tsv")): os.remove(f)\n'
         thispythonfn += 'logFid.close()\n'
         thispythonfn += 'END'
 
@@ -2615,7 +2683,7 @@ def runPipelinePar(launchSubproc=False,overwriteFC=False,cleanup=True):
                 except OSError:
                     pass
             if config.isCifti:
-                for f in glob.glob(config.fmriFile.replace('_Atlas','').replace(".dtseries.nii","*.tsv")):
+                for f in glob.glob(config.fmriFile_dn.replace(".dtseries.nii","*.tsv")):
                     try:
                         remove(f)
                     except OSError:
