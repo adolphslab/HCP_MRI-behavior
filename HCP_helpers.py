@@ -1671,7 +1671,7 @@ def makeGrayPlot(displayPlot=False,overwrite=False):
             Xcsf = X[maskCSF_,:]
         else:
             # cifti
-			 tsvFile = config.fmriFile.replace('.dtseries.nii','.tsv').replace(buildpath(),outpath())
+            tsvFile = config.fmriFile.replace('.dtseries.nii','.tsv').replace(buildpath(),outpath())
             if not op.isfile(tsvFile):									  
                 cmd = 'wb_command -cifti-convert -to-text {} {}'.format(config.fmriFile,config.fmriFile.replace('.dtseries.nii','.tsv'))
                 call(cmd,shell=True)
