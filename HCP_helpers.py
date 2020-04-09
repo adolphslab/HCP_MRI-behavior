@@ -355,10 +355,8 @@ def makeTissueMasks(overwrite=False,precomputed=False):
     
     if not op.isfile(GMmaskFileout) or overwrite:
         # load ribbon.nii.gz and wmparc.nii.gz
-        #ribbonFilein = op.join(config.DATADIR, config.subject, 'MNINonLinear','ribbon.nii.gz')
-        #wmparcFilein = op.join(config.DATADIR, config.subject, 'MNINonLinear', 'wmparc.nii.gz')
-        ribbonFilein = op.join(buildpath(),'ribbon.nii.gz')
-        wmparcFilein = op.join(buildpath(), 'wmparc.nii.gz')
+        ribbonFilein = op.join(config.DATADIR, config.subject, 'MNINonLinear','ribbon.nii.gz')
+        wmparcFilein = op.join(config.DATADIR, config.subject, 'MNINonLinear', 'wmparc.nii.gz')
         # make sure it is resampled to the same space as the functional run
         ribbonFileout = op.join(outpath(), 'ribbon.nii.gz')
         wmparcFileout = op.join(outpath(), 'wmparc.nii.gz')
