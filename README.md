@@ -1,6 +1,8 @@
 # HCP_MRI-behavior
 Code for predicting individual differences in behavioral variables (e.g., intelligence, personality) from resting-state fMRI functional connectivity, using data from the Young Adult Human Connectome Project. The code depends on the HCP data structure. HCP data (MRI, and behavior/demographics) is available from the HCP website (https://www.humanconnectome.org/study/hcp-young-adult)
 
+A later version of this pipeline, extended to be used with other datasets processed with fmriprep, is available at https://github.com/adolphslab/rsDenoise
+
 Authors: Julien Dubois (jcrdubois@gmail.com) and Paola Galdi (paola.galdi@gmail.com)
 
 The code is provided as is, for documentation purposes. 
