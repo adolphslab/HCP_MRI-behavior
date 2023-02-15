@@ -1832,7 +1832,7 @@ def TemporalFiltering(niiImg, flavor, masks, imgInfo):
             x = data2.T
             x1 = np.zeros((NR, x.shape[1]))
             x2 = np.zeros((NR, x.shape[1]))
-            for i in range(x.shape[2]):
+            for i in range(x.shape[1]):
                 x1[:,i] = 2*x[0,i] - np.flipud(x[1:NR+1,i])
                 x2[:,i] = 2*x[-1,i] - np.flipud(x[-NR-1:-1,i])
             x = np.vstack([x1,x,x2])
